@@ -330,6 +330,7 @@ A malicious client can achieve cause highly asymmetric resource usage at the pro
     * Enable the PAWS optimization ({{?RFC7323, Section 5}}) across successive connections (e.g., Linux's `tcp_tw_reuse=1` {{SYSCTL}}).  This makes TIME-WAIT 4-tuples rapidly reusable if the destination enables TCP Timestamps, which most do.
     * Allocate a large range of IP addresses for TCP connections (especially in IPv6).
     * Limit the number of connections for each client to each destination, even if those connections are in a waiting state and the corresponding CONNECT stream is closed.
+    * If necessary, perform an abrupt TCP closure that destroys the Transmission Control Block.  Note that reusing a 4-tuple in this way can increase the risk of interference between successive connections.
 
 # Operational Considerations
 
