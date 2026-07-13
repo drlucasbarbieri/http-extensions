@@ -30,6 +30,10 @@ informative:
     title: Clear Site Data
     date: 30 November 2017
     target: https://www.w3.org/TR/clear-site-data/
+  SYSCTL:
+    title: IP Sysctl -- The Linux Kernel documentation
+    date: 14 June 2026
+    target: https://www.kernel.org/doc/html/v7.1/networking/ip-sysctl.html
 
 --- abstract
 
@@ -319,10 +323,14 @@ A malicious client can achieve cause highly asymmetric resource usage at the pro
 
 * **Connection Pileup**: A malicious client can attempt to open a large number of connections to exhaust the proxy's memory, port, or file descriptor limits. When using HTTP/2 or HTTP/3, each incremental TCP connection imposes a much higher cost on the proxy than on the attacker.
   - Mitigation: Limit the number of concurrent connections per client.
-* **Window Bloat**: An attacker can grow the receive window size by simulating a "long, fat network" {{?RFC7323}}, then fill the window (from the sender) and stop acknowledging it (at the receiver).  This leaves the proxy buffering up to 1 GiB of TCP data until some timeout, while the attacker does not have to retain a large buffer.
+* **Window Bloat**: An attacker can grow the receive window size by simulating a "long, fat network" ({{?RFC7323, Section 1.1}}), then fill the window (from the sender) and stop acknowledging it (at the receiver).  This leaves the proxy buffering up to 1 GiB of TCP data until some timeout, while the attacker does not have to retain a large buffer.
   - Mitigation: Limit the maximum receive window for TCP and HTTP connections, and the size of userspace buffers used for proxying.  Alternatively, monitor the connections' send queues and limit the total buffered data per client.
 * **WAIT Abuse**: An attacker can force the proxy into a TIME-WAIT, CLOSE-WAIT, or FIN-WAIT state until the timer expires, tying up a proxy-to-destination 4-tuple for up to four minutes after the client's connection is closed.
-  - Mitigation: Limit the number of connections for each client to each destination, even if those connections are in a waiting state and the corresponding CONNECT stream is closed.  Alternatively, allocate a large range of IP addresses for TCP connections (especially in IPv6).
+  - Mitigations:
+    * Enable the PAWS optimization ({{?RFC7323, Section 5}}) across successive connections (e.g., Linux's `tcp_tw_reuse=1` {{SYSCTL}}).  This makes TIME-WAIT 4-tuples rapidly reusable if the destination enables TCP Timestamps, which most do.
+    * Allocate a large range of IP addresses for TCP connections (especially in IPv6).
+    * Limit the number of connections for each client to each destination, even if those connections are in a waiting state and the corresponding CONNECT stream is closed.
+    * If necessary, perform an abrupt TCP closure that destroys the Transmission Control Block.  Note that reusing a 4-tuple in this way can increase the risk of interference between successive connections.
 
 # Operational Considerations
 
